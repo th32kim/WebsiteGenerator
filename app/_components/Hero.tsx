@@ -41,7 +41,7 @@ function Hero() {
         <div className='mt-6 w-full max-w-2xl rounded-2xl border bg-card p-4 shadow-sm sm:p-5 lg:max-w-3xl'>
             <textarea placeholder='Describe your page design'
             value={userInput}
-            onChange={(event)=>setUserInput(event.target.value)}
+            onChange={(e)=>setUserInput(e.target.value)}
             className='h-28 w-full resize-none text-sm focus:outline-none focus:ring-0 sm:text-base lg:h-32'
             />
             <div className='flex justify-between items-center'>
