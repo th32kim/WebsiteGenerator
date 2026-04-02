@@ -2,6 +2,7 @@
 import { Button } from '@/components/ui/button'
 import React, { useState } from 'react'
 import { ImagePlus, ArrowUp, LayoutDashboard, Key, HomeIcon, User } from 'lucide-react'
+import { SignInButton } from '@clerk/nextjs'
 
 const suggestions = [
   {
@@ -31,32 +32,35 @@ function Hero() {
   const [userInput, setUserInput] = useState<string>();
   
   return (
-    <div className='flex flex-col items-center h-[80vh] justify-center'>
+    <main className='mx-auto flex min-h-[calc(100vh-84px)] w-full max-w-7xl flex-col items-center justify-center px-4 py-10 sm:px-6 lg:px-10 lg:py-16 xl:py-20'>
         {/* Header & Description */}
-        <h2 className='font-bold text-6xl'>What should we Design?</h2>
-        <p className='mt-2 text-xl text-gray-500'>Generate, Edit and Explore deisgn with AI, Export code as well</p>
+        <h2 className='text-center text-3xl font-bold leading-tight sm:text-5xl lg:text-6xl xl:text-7xl'>What should we Design?</h2>
+        <p className='mt-3 max-w-2xl text-center text-sm text-gray-500 sm:text-lg lg:max-w-3xl'>Generate, edit and explore design ideas with AI, then export the code.</p>
         
         {/* Text input box */}
-        <div className='w-full max-w-2xl p-5 border mt-5 rounded-2xl'>
+        <div className='mt-6 w-full max-w-2xl rounded-2xl border bg-card p-4 shadow-sm sm:p-5 lg:max-w-3xl'>
             <textarea placeholder='Describe your page design'
             value={userInput}
             onChange={(event)=>setUserInput(event.target.value)}
-            className='w-full h-24 focus:outline-none focus:ring-0 resize-none'
+            className='h-28 w-full resize-none text-sm focus:outline-none focus:ring-0 sm:text-base lg:h-32'
             />
             <div className='flex justify-between items-center'>
                 <Button variant={'ghost'}><ImagePlus/></Button>
-                <Button><ArrowUp /></Button> 
+                <SignInButton mode='modal' forceRedirectUrl={'/workspace'}>
+                  <Button disabled={!userInput}><ArrowUp /></Button>
+                </SignInButton>
+                
             </div>
         </div>
         {/* suggestion list */}
-        <div className='mt-4 flex gap-3'>
+        <div className='mt-4 grid w-full max-w-4xl grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4'>
           {suggestions.map((suggestion,index)=>(
-            <Button key={index} variant={'outline'} onClick={()=>setUserInput(suggestion.prompt)}>
+            <Button key={index} variant={'outline'} className='h-auto justify-start gap-2 px-3 py-2 text-xs sm:text-sm lg:min-h-11' onClick={()=>setUserInput(suggestion.prompt)}>
               <suggestion.icon/>
               {suggestion.label}</Button>
           ))}
         </div>
-    </div>
+    </main>
   )
 }
 
