@@ -3,6 +3,12 @@ import { Button } from '@/components/ui/button'
 import React, { useState } from 'react'
 import { ImagePlus, ArrowUp, LayoutDashboard, Key, HomeIcon, User } from 'lucide-react'
 import { SignInButton } from '@clerk/nextjs'
+import {v4 as uuidv4} from 'uuid'
+import axios from 'axios'
+import { toast } from 'sonner'
+import { useUser } from '@clerk/nextjs'
+import { useRouter } from 'next/navigation'
+import { Loader2Icon } from 'lucide-react'
 
 const suggestions = [
   {
@@ -27,10 +33,45 @@ const suggestions = [
   }
 ]
 
+
+
 function Hero() {
 
   const [userInput, setUserInput] = useState<string>();
-  
+  const {user} = useUser();
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+
+
+  const CreateNewProject = async() => {
+    setIsLoading(true);
+    const projectId = uuidv4();
+    const frameId = generateRandomFrameNumber();
+    const messages = [
+      {
+        role: 'user',
+        content: userInput,
+      }
+    ]
+
+    try{
+      const result = await axios.post('/api/projects', {
+        projectId: projectId,
+        frameId: frameId,
+        messages: messages,
+      });
+      console.log(result.data);
+      toast.success('Project Created Successfully');
+      //Navigate to Playground
+      router.push(`/playground/${projectId}?frameId=${frameId}`);
+      setIsLoading(false);
+    }catch(e){
+      toast.error('Internal Server Error');
+      console.log(e);
+      setIsLoading(false);
+    }
+  }
+
   return (
     <main className='mx-auto flex min-h-[calc(100vh-84px)] w-full max-w-7xl flex-col items-center justify-center px-4 py-10 sm:px-6 lg:px-10 lg:py-16 xl:py-20'>
         {/* Header & Description */}
@@ -46,9 +87,17 @@ function Hero() {
             />
             <div className='flex justify-between items-center'>
                 <Button variant={'ghost'}><ImagePlus/></Button>
-                <SignInButton mode='modal' forceRedirectUrl={'/workspace'}>
-                  <Button disabled={!userInput}><ArrowUp /></Button>
-                </SignInButton>
+                {!user ? (
+                  <SignInButton mode='modal' forceRedirectUrl={'/workspace'}>
+                    <Button disabled={!userInput || isLoading}>
+                      {isLoading ? <Loader2Icon className='animate-spin'/> : <ArrowUp />}
+                    </Button>
+                  </SignInButton>
+                ) : (
+                  <Button disabled={!userInput || isLoading} onClick={CreateNewProject}>
+                    {isLoading ? <Loader2Icon className='animate-spin'/> : <ArrowUp />}
+                  </Button>
+                )}
                 
             </div>
         </div>
@@ -65,3 +114,7 @@ function Hero() {
 }
 
 export default Hero
+
+const generateRandomFrameNumber = () => {
+  return Math.floor(Math.random() * 1000000);
+}
