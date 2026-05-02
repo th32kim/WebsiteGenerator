@@ -41,3 +41,4 @@ yarn-error.log*
 next-env.d.ts
 .agents/skills/neon-postgres/SKILL.md
 .claude/skills/neon-postgres/SKILL.md
+INTERVIEW_PREP_PLAYBOOK.md

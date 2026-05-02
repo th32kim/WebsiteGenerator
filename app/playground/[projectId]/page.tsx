@@ -129,7 +129,7 @@ function PlayGround() {
                 const designCode = result.data?.designCode;
                 if (typeof designCode === "string" && designCode.length > 0) {
                     const fenceIdx = designCode.indexOf("```html");
-                    // If no ```html fence, indexOf is -1; -1+7=6 would slice(6) and chop "<div c" → "lass=" ...
+                    
                     if (fenceIdx >= 0) {
                         const after = designCode.slice(fenceIdx + 7);
                         const endFence = after.indexOf("```");

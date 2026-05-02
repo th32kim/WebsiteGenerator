@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import WebPageTool from "./WebPageTool";
 
 type Props = {
   generatedCode: string;
@@ -6,7 +7,7 @@ type Props = {
   isStreaming?: boolean;
 };
 
-const IFRAME_SHELL = `<!DOCTYPE html>
+const HTML_CODE = `<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
@@ -46,6 +47,7 @@ function stripMarkdownFences(code: string): string {
 
 function WebsiteDesign({ generatedCode, isStreaming = false }: Props) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [selectedScreenSize, setSelectedScreenSize] = useState('web');
   /** Always inject latest HTML on iframe load (avoids stale closure if code arrived before load). */
   const codeRef = useRef(generatedCode);
   codeRef.current = generatedCode;
@@ -63,8 +65,81 @@ function WebsiteDesign({ generatedCode, isStreaming = false }: Props) {
     injectGenerated(generatedCode);
   }, [generatedCode, injectGenerated]);
 
+  //For user selecting parts of the ui
+  useEffect(() => {
+    if (!iframeRef.current) return;
+    const doc = iframeRef.current.contentDocument;
+    if (!doc) return;
+
+    let hoverEl: HTMLElement | null = null;
+    let selectedEl: HTMLElement | null = null;
+  
+    const handleMouseOver = (e: MouseEvent) => {
+      if (selectedEl) return;
+      const target = e.target as HTMLElement;
+      if (hoverEl && hoverEl !== target) {
+        hoverEl.style.outline = "";
+      }
+      hoverEl = target;
+      hoverEl.style.outline = "2px dotted blue";
+    };
+  
+    const handleMouseOut = (e: MouseEvent) => {
+      if (selectedEl) return;
+      if (hoverEl) {
+        hoverEl.style.outline = "";
+        hoverEl = null;
+      }
+    };
+  
+    const handleClick = (e: MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const target = e.target as HTMLElement;
+  
+      if (selectedEl && selectedEl !== target) {
+        selectedEl.style.outline = "";
+        selectedEl.removeAttribute("contenteditable");
+      }
+  
+      selectedEl = target;
+      selectedEl.style.outline = "2px solid red";
+      selectedEl.setAttribute("contenteditable", "true");
+      selectedEl.focus();
+      console.log("Selected element:", selectedEl);
+    };
+  
+    const handleBlur = () => {
+      if (selectedEl) {
+        console.log("Final edited element:", selectedEl.outerHTML);
+      }
+    };
+  
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && selectedEl) {
+        selectedEl.style.outline = "";
+        selectedEl.removeAttribute("contenteditable");
+        selectedEl.removeEventListener("blur", handleBlur);
+        selectedEl = null;
+      }
+    };
+  
+    doc.body?.addEventListener("mouseover", handleMouseOver);
+    doc.body?.addEventListener("mouseout", handleMouseOut);
+    doc.body?.addEventListener("click", handleClick);
+    doc?.addEventListener("keydown", handleKeyDown);
+  
+    // Cleanup on unmount
+    return () => {
+      doc.body?.removeEventListener("mouseover", handleMouseOver);
+      doc.body?.removeEventListener("mouseout", handleMouseOut);
+      doc.body?.removeEventListener("click", handleClick);
+      doc?.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
   return (
-    <div className="relative flex-1 overflow-auto p-5">
+    <div className="p-5 w-full flex items-center flex-col">
       {isStreaming ? (
         <div
           className="pointer-events-none absolute right-7 top-7 z-10 rounded-full bg-blue-600/90 px-3 py-1 text-xs font-medium text-white shadow"
@@ -76,11 +151,12 @@ function WebsiteDesign({ generatedCode, isStreaming = false }: Props) {
       <iframe
         ref={iframeRef}
         title="Website preview"
-        className="h-[min(91vh,800px)] min-h-[480px] w-full rounded-lg border bg-white"
-        srcDoc={IFRAME_SHELL}
+        className={`${selectedScreenSize == 'web' ? 'w-full' : 'w-130'} h-[600px] border-2 rounded-xl`}
+        srcDoc={HTML_CODE}
         sandbox="allow-scripts allow-same-origin"
         onLoad={() => injectGenerated(codeRef.current)}
       />
+      <WebPageTool selectedScreenSize={selectedScreenSize} setSelectedScreenSize={(v:string)=>setSelectedScreenSize(v)} generatedCode={generatedCode}/>
     </div>
   );
 }
