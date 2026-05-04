@@ -5,6 +5,7 @@ import { useUser } from '@clerk/nextjs'
 import { useEffect } from 'react'
 import { UserDetailContext } from '@/context/UserDetailContext'
 import { useState } from 'react'
+import { OnSaveContext } from '@/context/OnSaveContext'
 
  function Provider({
     children,
@@ -14,6 +15,7 @@ import { useState } from 'react'
 
     const {user} = useUser();
     const [userDetail, setUserDetail] = useState<any>();    
+    const [onSaveData, setOnSaveData] = useState<any>(null);
     useEffect(() => {   
         user && CreateNewUser()
     }, [user])
@@ -30,7 +32,9 @@ import { useState } from 'react'
   return (
     <div>
         <UserDetailContext.Provider value={{userDetail, setUserDetail}}>
+          <OnSaveContext.Provider value={{onSaveData, setOnSaveData}}>
             {children}
+            </OnSaveContext.Provider>
         </UserDetailContext.Provider>
     </div>
   )

@@ -1,5 +1,12 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import WebPageTool from "./WebPageTool";
+import ElementSettingSection from "./ElementSettingSection";
+import ImageSettingSection from "./ImageSettingSection";
+import { OnSaveContext } from "@/context/OnSaveContext";
+import { useContext } from "react";   
+import axios from "axios";
+import { toast } from "sonner";
+import { useParams, useSearchParams } from "next/navigation";
 
 type Props = {
   generatedCode: string;
@@ -48,6 +55,16 @@ function stripMarkdownFences(code: string): string {
 function WebsiteDesign({ generatedCode, isStreaming = false }: Props) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [selectedScreenSize, setSelectedScreenSize] = useState('web');
+  const [selectedElement, setSelectedElement] = useState<HTMLElement|null>();
+  const { onSaveData } = useContext(OnSaveContext);
+
+  const params = useParams();
+  const searchParams = useSearchParams();
+  const projectIdRaw = params.projectId;
+  const projectId = Array.isArray(projectIdRaw)
+    ? projectIdRaw[0]
+    : projectIdRaw;
+  const frameId = searchParams.get("frameId");
   /** Always inject latest HTML on iframe load (avoids stale closure if code arrived before load). */
   const codeRef = useRef(generatedCode);
   codeRef.current = generatedCode;
@@ -107,6 +124,7 @@ function WebsiteDesign({ generatedCode, isStreaming = false }: Props) {
       selectedEl.setAttribute("contenteditable", "true");
       selectedEl.focus();
       console.log("Selected element:", selectedEl);
+      setSelectedElement(selectedEl);
     };
   
     const handleBlur = () => {
@@ -138,25 +156,70 @@ function WebsiteDesign({ generatedCode, isStreaming = false }: Props) {
     };
   }, []);
 
+  useEffect(() => {
+    onSaveData && onSaveCode();
+  }, [onSaveData]);
+
+  const onSaveCode = async () => {
+    if (iframeRef.current) {
+      try {
+        const iframeDoc = iframeRef.current.contentDocument ||
+          iframeRef.current.contentWindow?.document;
+        if (iframeDoc) {
+          const clonedDoc = iframeDoc.documentElement.cloneNode(true) as HTMLElement;
+          const allEls = clonedDoc.querySelectorAll<HTMLElement>("*");
+          allEls.forEach((el) => {
+            el.style.outline = "";
+            el.style.cursor = "";
+          });
+
+          const html = clonedDoc.outerHTML;
+          console.log("HTML to save", html);
+
+          // Saving changed html to db
+          const result = await axios.post("/api/frames", {
+            designCode: html,
+            frameId: frameId,
+            projectId: projectId,
+          });
+          console.log(result.data);
+          toast.success("Saved!");
+        }
+      } catch (error) {
+        console.error("Error saving code", error);
+      }
+    }
+  };
+
   return (
-    <div className="p-5 w-full flex items-center flex-col">
-      {isStreaming ? (
-        <div
-          className="pointer-events-none absolute right-7 top-7 z-10 rounded-full bg-blue-600/90 px-3 py-1 text-xs font-medium text-white shadow"
-          aria-live="polite"
-        >
-          Live preview
-        </div>
-      ) : null}
-      <iframe
-        ref={iframeRef}
-        title="Website preview"
-        className={`${selectedScreenSize == 'web' ? 'w-full' : 'w-130'} h-[600px] border-2 rounded-xl`}
-        srcDoc={HTML_CODE}
-        sandbox="allow-scripts allow-same-origin"
-        onLoad={() => injectGenerated(codeRef.current)}
-      />
-      <WebPageTool selectedScreenSize={selectedScreenSize} setSelectedScreenSize={(v:string)=>setSelectedScreenSize(v)} generatedCode={generatedCode}/>
+    <div className = "flex gap-2 w-full">
+      <div className="p-5 w-full flex items-center flex-col">
+        {isStreaming ? (
+          <div
+            className="pointer-events-none absolute right-7 top-7 z-10 rounded-full bg-blue-600/90 px-3 py-1 text-xs font-medium text-white shadow"
+            aria-live="polite"
+          >
+            Live preview
+          </div>
+        ) : null}
+        <iframe
+          ref={iframeRef}
+          title="Website preview"
+          className={`${selectedScreenSize == 'web' ? 'w-full' : 'w-130'} h-[600px] border-2 rounded-xl`}
+          srcDoc={HTML_CODE}
+          sandbox="allow-scripts allow-same-origin"
+          onLoad={() => injectGenerated(codeRef.current)}
+        />
+        <WebPageTool selectedScreenSize={selectedScreenSize} setSelectedScreenSize={(v:string)=>setSelectedScreenSize(v)} generatedCode={generatedCode}/>
+      </div>
+        {selectedElement?.tagName === "IMG" ? (
+          <ImageSettingSection selectedEl={selectedElement as HTMLImageElement} />
+        ) : selectedElement ? (
+          <ElementSettingSection
+            selectedEl={selectedElement}
+            clearSelection={() => setSelectedElement(null)}
+          />
+        ) : null}
     </div>
   );
 }

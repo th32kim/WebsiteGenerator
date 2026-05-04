@@ -1,14 +1,16 @@
 'use client'
 import { Button } from '@/components/ui/button'
-import React, { useState } from 'react'
+import React, { useContext, useState } from 'react'
 import { ImagePlus, ArrowUp, LayoutDashboard, Key, HomeIcon, User } from 'lucide-react'
-import { SignInButton } from '@clerk/nextjs'
+import { SignInButton, useAuth } from '@clerk/nextjs'
 import {v4 as uuidv4} from 'uuid'
 import axios from 'axios'
 import { toast } from 'sonner'
 import { useUser } from '@clerk/nextjs'
 import { useRouter } from 'next/navigation'
 import { Loader2Icon } from 'lucide-react'
+import { UserDetailContext } from '@/context/UserDetailContext'
+
 
 const suggestions = [
   {
@@ -39,11 +41,22 @@ function Hero() {
 
   const [userInput, setUserInput] = useState<string>();
   const {user} = useUser();
+  const {has} = useAuth()
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const {userDetail, setUserDetail} = useContext(UserDetailContext)
+
+  const hasUnlimitedAccess = has && has({plan:'unlimited'})
 
 
   const CreateNewProject = async() => {
+
+
+    if(!hasUnlimitedAccess && userDetail?.credits !<= 0){
+      toast.error('You have no credits left. Please upgrade your plan.');
+      return;
+    }
+
     setIsLoading(true);
     const projectId = uuidv4();
     const frameId = generateRandomFrameNumber();
@@ -59,11 +72,15 @@ function Hero() {
         projectId: projectId,
         frameId: frameId,
         messages: messages,
+        credits: userDetail?.credits
       });
       console.log(result.data);
       toast.success('Project Created Successfully');
       //Navigate to Playground
       router.push(`/playground/${projectId}?frameId=${frameId}`);
+      setUserDetail((prev:any)=>({
+        ...prev
+        , credits: prev?.credits!-1}))
       setIsLoading(false);
     }catch(e){
       toast.error('Internal Server Error');

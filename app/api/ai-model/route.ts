@@ -6,14 +6,6 @@ function extractStreamText(data: unknown): string {
   if (!data || typeof data !== "object") return "";
   const d = data as Record<string, unknown>;
 
-  if ("error" in d && d.error) {
-    const e = d.error;
-    if (typeof e === "object" && e && "message" in e) {
-      return String((e as { message?: unknown }).message ?? "");
-    }
-    return String(e);
-  }
-
   const choices = d.choices;
   if (!Array.isArray(choices) || choices.length === 0) return "";
 
@@ -130,6 +122,23 @@ export async function POST(req: NextRequest) {
 
           try {
             const data = JSON.parse(jsonStr) as unknown;
+            if (
+              typeof data === "object" &&
+              data !== null &&
+              "error" in data &&
+              (data as { error?: unknown }).error
+            ) {
+              const e = (data as { error?: { message?: unknown } | string }).error;
+              const msg =
+                typeof e === "object" && e && "message" in e
+                  ? String((e as { message?: unknown }).message ?? "")
+                  : typeof e === "string"
+                    ? e
+                    : "OpenRouter returned an error";
+              console.error("OpenRouter SSE error:", data);
+              errorOnce(new Error(msg || "OpenRouter returned an error"));
+              return;
+            }
             const text = extractStreamText(data);
             if (text) {
               totalChars += text.length;

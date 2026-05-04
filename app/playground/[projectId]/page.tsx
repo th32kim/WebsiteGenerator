@@ -277,10 +277,14 @@ function PlayGround() {
                 ]);
             }
         } catch (error) {
-            console.error(error);   
+            console.error(error);
+            const detail =
+                error instanceof Error && error.message
+                    ? error.message
+                    : "Request failed. Please try again in a moment.";
             setMessages((prev)=>[
                 ...prev,
-                {role:'assistant',content:'Error: Request failed. Please try again in a moment.'}
+                { role: "assistant", content: `Error: ${detail}` },
             ]);
         } finally {
             cancelStreamRaf();
